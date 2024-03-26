@@ -2,13 +2,15 @@
 #define PROTOCOL_H_
 #include <inttypes.h>
 
-typedef enum {
-    START = 0x01,
-    WAIT = 0x02,
-    END = 0x04
-} ProtocolSignal;
+typedef struct {
+    char *msg; //52 bytes = 51 char + '\0'
+    uint16_t orig_addr; //endereço da origem da comunicação 
+    uint16_t dest_addr; //endereço de destino da comunicação
+    uint32_t timestamp; //timestamp y2k
+    char *checksum;     //checksum (id) 32 bits truncated SHA1
+}package_t;
 
-int send_message(char *msg);
+int send_message(char *msg, uint16_t orig_addr, uint16_t dest_addr);
 
-int get_message(char* msg, uint8_t msg_size);
+package_t *get_message();
 #endif
