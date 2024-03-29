@@ -5,7 +5,7 @@
 #define DAY_SECONDS 86400
 #define HOUR_SECONDS 3600
 
-uint32_t get_y2k_timestamp();
+uint32_t get_timestamp();
 char *get_formatted_timestamp(uint32_t timestamp);
 
 #endif

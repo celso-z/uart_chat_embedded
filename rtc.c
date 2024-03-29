@@ -153,6 +153,7 @@ time_struct *getCurrentTime(){
     time_struct *time = (time_struct *)malloc(sizeof(time_struct));
 
     if(time == NULL) return NULL;
+    init_connection();
     updateCurrentTime(time);
     return time;
 }
@@ -166,3 +167,21 @@ void updateCurrentTime(time_struct *time){
     time->dia = data_from_rtc(LE_DIA);
     time->ano = data_from_rtc(LE_ANO);
 }
+
+/*
+int main(){
+    init_connection();
+    data_to_rtc(ESCREVE_ANO, 24);
+    data_to_rtc(ESCREVE_MES, 3);
+    data_to_rtc(ESCREVE_DATA, 29);
+    data_to_rtc(ESCREVE_DIA, 7);
+    data_to_rtc(ESCREVE_HORA, 9);
+    data_to_rtc(ESCREVE_MIN, 20);
+    data_to_rtc(ESCREVE_SEG, 0);
+    
+    while(1){
+        
+    }
+    return 0;
+}
+*/

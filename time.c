@@ -1,78 +1,62 @@
 #include "./time.h"
 #include "./rtc.h"
-#include "../io.h"
+#include "./io.h"
 #include <stdlib.h>
+#include <stdio.h>
+#define F_CPU 16000000
+#include <util/delay.h>
 
-char* data_fields_to_str(uint8_t data_fields[6]){
-    char *formatted_string = malloc(sizeof(char) * 19);
-    int digit_index = 0; //ESSE AQUI É PARA CONTROLAR O DIGITO
-    char digit_ascii[2];
-    int str_index = 0; //Esse aqui é pra controlar a string
-    for(int i = 0; i < 6; i++){//ESSE AQUI É PARA CONTROLAR O X
-        uint8_t x = data_fields[i];
-        while(x > 0){
-            uint8_t digit = x%10;
-            digit_ascii[digit_index] = '0' + digit;
-            digit_index++;
-            x /= 10;
-        }
-        if(digit_index == 1){
-            formatted_string[str_index] = '0';
-        }
-        else{
-            formatted_string[str_index] = digit_ascii[1];
-        }
-        str_index++;
-        formatted_string[str_index] = digit_ascii[0];
-        str_index++;
-        if(i < 2){
-            formatted_string[str_index] = '/';
-        }else if(i == 2){
-            formatted_string[str_index] = '-';
-        }else if(i < 5){
-            formatted_string[str_index] = ':';
-        }else{
-            formatted_string[str_index] = '\0';
-        }
-        str_index++;
-        digit_index = 0;
-        
-    }
-    return formatted_string;
+/*Retorna o número de dias a partir de uma data específica
+http://howardhinnant.github.io/date_algorithms.html#civil_from_days*/
+uint32_t days_from(uint16_t y, uint8_t m, uint8_t d) {
+    y -= m <= 2;
+    uint32_t era = (y >= 0 ? y : y-399) / 400; //Número da era (será multiplicado por     400 pois a cada 400 anos o calendário gregoriano se repete, estranho não)
+    uint32_t yoe = (y - era * 400);      // [0, 399]
+    uint32_t doy = (153*(m > 2 ? m-3 : m+9) + 2)/5 + d-1;  // [0, 365]
+    uint32_t doe = yoe * 365 + yoe/4 - yoe/100 + doy;         // [0, 146096]
+    return era * 146097 + doe - 719468;
 }
-
-uint32_t get_y2k_timestamp(){
-    uint32_t y2k_timestamp = 0;
-
+uint32_t get_timestamp(){
+    uint32_t timestamp = 0;
     time_struct *now = getCurrentTime();
-    y2k_timestamp = now->ano * 365 * DAY_SECONDS;
-    y2k_timestamp += (now->mes - 1) * 30 * DAY_SECONDS;
-    y2k_timestamp += (now->data - 1) * DAY_SECONDS;
-    y2k_timestamp += now->horas * HOUR_SECONDS;
-    y2k_timestamp += now->minutos * 60;
-    y2k_timestamp += now->segundos;
+    timestamp = days_from((uint16_t)(now->ano + 2000), now->mes, now->data);
+    timestamp -= days_from(2000, 1, 1);
+    timestamp *= DAY_SECONDS;
+    timestamp += ((uint32_t)now->horas * HOUR_SECONDS) + ((uint32_t)now->minutos * 60) + (uint32_t)now->segundos;
     free(now);
 
-    return y2k_timestamp;
+    return timestamp;
 }
 
-//UTILIZA MALLOC
-char *get_formatted_timestamp(uint32_t timestamp){
-    char *str;
-    uint8_t data_fields[6] = {0,1,1,0,0,0};
+uint16_t *date_of(uint32_t unix_epoch_days){
+    uint16_t *date_fields = malloc(sizeof(uint16_t) * 3);
+    unix_epoch_days += 719468;
+    uint32_t era = (unix_epoch_days >= 0 ? unix_epoch_days : unix_epoch_days - 146096    ) / 146097;
+    uint32_t doe = (unix_epoch_days - era * 146097);          // [0, 146096]
+    uint32_t yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
+    uint32_t y = yoe + era * 400;
+    uint32_t doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
+    uint32_t mp = (5*doy + 2)/153;                                   // [0, 11]
+    uint32_t d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
+    uint32_t m = mp < 10 ? mp+3 : mp-9;                            // [1, 12]
+    date_fields[0] = (uint16_t)(y + (m <= 2));
+    date_fields[1] = (uint16_t)m;
+    date_fields[2] = (uint16_t)d;
+    return date_fields;
+}
 
-    data_fields[0] += timestamp / (365 * DAY_SECONDS);
-    timestamp = timestamp % (365 * DAY_SECONDS);
-    data_fields[1] += timestamp / (30 * DAY_SECONDS);
-    timestamp = timestamp % (30 * DAY_SECONDS);
-    data_fields[2] += timestamp / DAY_SECONDS;
-    timestamp = timestamp % DAY_SECONDS;
-    data_fields[3] += timestamp / HOUR_SECONDS;
-    timestamp = timestamp % HOUR_SECONDS;
-    data_fields[4] += timestamp / 60;
-    timestamp = timestamp % 60;
-    data_fields[5] += timestamp;
-    str = data_fields_to_str(data_fields);
-    
-    return str;
+char *get_formatted_timestamp(uint32_t timestamp){
+    char *str = malloc(sizeof(char) * 20);
+    timestamp += (days_from(2000, 1, 1) * DAY_SECONDS);
+    uint32_t seconds_current_day = timestamp % DAY_SECONDS; //segundos do dia atual
+    uint32_t epoch_days = timestamp / DAY_SECONDS; //dias desde 1/1/1970 (UNIX EPOCH)
+    uint16_t *date_fields = date_of(epoch_days);
+    uint8_t hours_current_day = seconds_current_day / HOUR_SECONDS;
+    seconds_current_day %= HOUR_SECONDS;
+    uint8_t minutes_current_day = seconds_current_day / 60;
+    seconds_current_day %= 60;
+
+    sprintf(str, "%02d/%02d/%02d-%02d:%02d:%02d",date_fields[2], date_fields[1], date_fields[0], hours_current_day, minutes_current_day, (uint8_t)seconds_current_day);
+    free(date_fields);
+    return str; 
 }
