@@ -193,7 +193,7 @@ get_checksum(uint8_t *digest, char *hexdigest, const uint8_t *data, size_t datab
   /* Store hex version of digest in supplied buffer */
   if (hexdigest)
   {
-    snprintf (hexdigest, 8, "%08x",
+    snprintf (hexdigest, 9, "%08lx",
               H[1]); //TRUCATED OUTPUT FOR MEMORY REASONS
   }
 

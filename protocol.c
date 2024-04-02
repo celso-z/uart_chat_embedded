@@ -5,12 +5,12 @@
 #include <stdlib.h>
 
 int send_message(char* msg, uint8_t orig_addr, uint8_t dest_addr){
-    package_t *pkg = malloc(sizeof(package_t));    
+    package_t *pkg = malloc(64);    
     if(pkg == NULL) return -1;
-    pkg->checksum = malloc(sizeof(char) * 9);
-    if(pkg->checksum == NULL) return -1;
-    pkg->checksum[8] = '\0';
+    //pkg->checksum = malloc(sizeof(char) * 9);
+    //if(pkg->checksum == NULL) return -1;
     if(get_checksum(NULL, pkg->checksum, (uint8_t *)pkg, (size_t) 64) == -1) return -1;
+    pkg->checksum[8] = '\0';
     pkg->orig_addr = orig_addr;
     pkg->dest_addr = dest_addr;
     pkg->timestamp = get_timestamp();
@@ -18,6 +18,8 @@ int send_message(char* msg, uint8_t orig_addr, uint8_t dest_addr){
         pkg->msg[i] = msg[i];
     }
     pkg->msg[48] = '\0';
+    //pkg->msg = msg;
+    connection_init();
     if(serialize_package((void *)pkg) == -1) return -1;
     free(pkg);
     
