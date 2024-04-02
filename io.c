@@ -16,9 +16,9 @@
 int uart_putchar(char c, FILE *stream);
 char uart_getchar(FILE *stream);
 
-//static const FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+static const FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 
-//static const FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
+static const FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
 
 void connection_init() {
     UBRR0H = UBRRH_VALUE;
@@ -45,16 +45,16 @@ char uart_getchar(FILE *stream) {
 }
 
 void *deserialize_package(){
-    void *pkg = malloc((sizeof(uint32_t) * 16));
+    void *pkg = malloc(PACKET_SIZE);
     if(pkg == NULL) return NULL;
-    int r_value = fread(pkg, PACKAGE_SIZE, 1, &uart_input);
+    int r_value = fread(pkg, PACKET_SIZE, 1, &uart_input);
     if(r_value != 64) return NULL;
     return pkg;
 }
 
 int serialize_package(void *pkg){
     if(pkg == NULL) return -1;
-    int r_value = fwrite(pkg, PACKAGE_SIZE, 1, &uart_output);
+    int r_value = fwrite(pkg, PACKET_SIZE, 1, &uart_output);
     if(r_value != 1) return -1;
     return 0;
 }
