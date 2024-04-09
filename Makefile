@@ -1,6 +1,7 @@
 CC=avr-gcc
-SRC=io.c rtc.c time.c checksum.c protocol.c main.c
 CFLAGS=-mmcu=atmega328p -O1
+INCLUDES=./includes/*.c
 
 compile: main.c
-	$(CC) $(CFLAGS) $(SRC) -o main.elf
+	$(CC) $(CFLAGS) $(INCLUDES) main.c -o main.elf
+
